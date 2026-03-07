@@ -1,26 +1,116 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdfdfe;
+  --foreground: #1a1a1a;
 }
 
 @theme inline {
+  --color-primary: #8754b6;
+  --color-primary-100: #e3d8f2;
+  --color-primary-200: #c8b1e5;
+  --color-primary-300: #ac89d7;
+  --color-primary-400: #9162ca;
+  --color-primary-500: #582c8e;
+  --color-primary-foreground: #f8e1ff;
+
+  --color-secondary: #ce0058;
+  --color-secondary-100: #f5ccde;
+  --color-secondary-200: #eb99bc;
+  --color-secondary-300: #e2669b;
+  --color-secondary-400: #d83379;
+  --color-secondary-500: #9b0042;
+
+  --color-label: #595555;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-gilroy: "Gilroy", sans-serif;
+  --font-notosans: "NotoSans", sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-gilroy);
+}
+
+/* Smooth scroll styling */
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+@keyframes ripple {
+  0% {
+    r: 100;
+    opacity: 0.8;
+  }
+  50% {
+    r: 250;
+    opacity: 0.4;
+  }
+  100% {
+    r: 400;
+    opacity: 0;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.label-gradient {
+  background: linear-gradient(to right, #8754b6 0%, #8754b6 50%, #ce0058 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.spotlight-card {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(white, white) padding-box,
+    radial-gradient(
+        250px circle at var(--x, -999px) var(--y, -999px),
+        #8754b6 0%,
+        #8754b6 50%,
+        #ce0058 75%,
+        transparent 90%
+      )
+      border-box,
+    linear-gradient(#e5e7eb, #e5e7eb) border-box;
 }
