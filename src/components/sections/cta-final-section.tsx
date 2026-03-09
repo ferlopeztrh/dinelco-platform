@@ -6,7 +6,7 @@ export const CtaSection = () => {
   return (
     <section
       aria-labelledby="cta-heading"
-      className="bg-primary py-32 px-6 flex flex-col items-center justify-center text-center"
+      className="bg-primary py-24 md:py-32 px-6 flex flex-col items-center justify-center text-center"
     >
       <h2
         id="cta-heading"

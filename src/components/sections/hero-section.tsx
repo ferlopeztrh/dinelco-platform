@@ -67,7 +67,7 @@ export function HeroSectionV2() {
     <section
       ref={sectionRef}
       data-hero
-      aria-label="Hero — Una fintech en la que puedes confiar"
+      aria-label="Hero — Una fintech en la que podés confiar"
       className="relative w-full bg-background"
       style={{ minHeight: "calc(100vh + 80px)" }}
     >
@@ -112,14 +112,17 @@ export function HeroSectionV2() {
           className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
           style={{ zIndex: 3 }}
         >
-          <h1 className="font-gilroy font-semibold text-white leading-[1.1] tracking-tight text-[32px]">
-            Una fintech en la que puedes confiar.
+          <h1
+            className="font-gilroy font-semibold text-white leading-[1.05] tracking-tight max-w-3xl"
+            style={{ fontSize: "clamp(2.25rem, 6vw, 4.5rem)" }}
+          >
+            Una fintech en la que podés confiar.
           </h1>
-          <p className="mt-6 text-lg text-white/70 max-w-xl font-notosans font-semibold leading-relaxed tracking-wide">
-            Una plataforma para pagos, datos y productos financieros. Diseñado
-            para crecer con los principales negocios del mundo.
+          <p className="mt-5 text-base sm:text-lg text-white/60 max-w-lg font-notosans leading-relaxed">
+            Pagos, datos y productos financieros para los negocios que eligen
+            crecer.
           </p>
-          <div className="mt-10">
+          <div className="mt-7">
             <SlideTextButton
               as="link"
               href="/primeros-pasos"

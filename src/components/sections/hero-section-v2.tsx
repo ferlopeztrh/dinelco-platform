@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -30,6 +30,28 @@ export function HeroSectionV2() {
       setPlaying(false);
     }
   };
+
+  // Pausar video cuando el hero sale del viewport — libera GPU/CPU
+  useEffect(() => {
+    const video = videoRef.current;
+    const section = sectionRef.current;
+    if (!video || !section) return;
+
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          // Solo reanudar si el usuario no lo pausó manualmente
+          if (playing) video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.05 }, // basta con que el 5% sea visible
+    );
+
+    obs.observe(section);
+    return () => obs.disconnect();
+  }, [playing]);
 
   useGSAP(
     () => {

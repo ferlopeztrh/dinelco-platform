@@ -89,21 +89,23 @@ export const StatsSection = () => {
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
+
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setVisible(true);
       return;
     }
-    const observer = new IntersectionObserver(
+
+    const obs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setVisible(true);
-          observer.disconnect();
+          obs.disconnect();
         }
       },
       { threshold: 0.15 },
     );
-    observer.observe(el);
-    return () => observer.disconnect();
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
 
   return (
@@ -116,25 +118,19 @@ export const StatsSection = () => {
         Dinelco en números
       </h2>
 
-      {/* Fondo fijo */}
+      {/* Fondo estático — sin backgroundAttachment:fixed que causaba repaint global */}
       <div
         aria-hidden
-        className="absolute inset-0 overflow-hidden pointer-events-none select-none"
-      >
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url(${backgroundD.src})`,
-            backgroundAttachment: "fixed",
-            backgroundRepeat: "repeat",
-            backgroundSize: "1400px",
-            backgroundPosition: "center top",
-          }}
-        />
-      </div>
+        className="absolute inset-0 pointer-events-none select-none"
+        style={{
+          backgroundImage: `url(${backgroundD.src})`,
+          backgroundRepeat: "repeat",
+          backgroundSize: "1400px",
+          backgroundPosition: "center top",
+        }}
+      />
 
       <div className="relative mx-auto md:max-w-400 max-w-full px-6 md:px-16">
-        {/* Texto encima de las cards, sobre el fondo púrpura */}
         <p className="font-gilroy font-black text-white text-3xl mb-4">
           La red dinelco en números
         </p>

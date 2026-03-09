@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useRef } from "react";
 import checkoutLogo from "@/assets/products/checkout-logo.png";
 import linkLogo from "@/assets/products/link-logo.png";
 import posLogo from "@/assets/products/pos-logo.png";
@@ -40,11 +41,54 @@ const products = [
 const VISIBLE_MOBILE = 1.15;
 const SIDE_PADDING = 24;
 
+// Componente interno para manejar el spotlight con listeners pasivos
+// Evita que React synthetic onMouseMove bloquee el hilo principal
+function SpotlightCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
+
+    const handleMove = (e: MouseEvent) => {
+      const rect = card.getBoundingClientRect();
+      card.style.setProperty("--x", `${e.clientX - rect.left}px`);
+      card.style.setProperty("--y", `${e.clientY - rect.top}px`);
+    };
+    const handleLeave = () => {
+      card.style.setProperty("--x", "-999px");
+      card.style.setProperty("--y", "-999px");
+    };
+
+    // passive:true — el browser sabe que no vamos a llamar preventDefault()
+    // → puede scrollear sin esperar a que termine nuestro handler
+    card.addEventListener("mousemove", handleMove, { passive: true });
+    card.addEventListener("mouseleave", handleLeave, { passive: true });
+
+    return () => {
+      card.removeEventListener("mousemove", handleMove);
+      card.removeEventListener("mouseleave", handleLeave);
+    };
+  }, []);
+
+  return (
+    <div ref={cardRef} className={`spotlight-card ${className ?? ""}`}>
+      {children}
+    </div>
+  );
+}
+
 export const ProductsSection = () => {
   return (
     <section
       aria-label="Productos Dinelco"
-      className="relative overflow-hidden pb-12"
+      className="relative overflow-hidden py-20"
     >
       {/* Patterns decorativos — solo desktop */}
       <div
@@ -75,25 +119,8 @@ export const ProductsSection = () => {
         <ul className="hidden md:grid grid-cols-3 gap-6 list-none p-0">
           {products.map((product) => (
             <li key={product.href}>
-              <Link href={product.href} className="group flex flex-col group">
-                <div
-                  className="spotlight-card relative w-full aspect-4/3 rounded-2xl bg-white"
-                  onMouseMove={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    e.currentTarget.style.setProperty(
-                      "--x",
-                      `${e.clientX - rect.left}px`,
-                    );
-                    e.currentTarget.style.setProperty(
-                      "--y",
-                      `${e.clientY - rect.top}px`,
-                    );
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.setProperty("--x", "-999px");
-                    e.currentTarget.style.setProperty("--y", "-999px");
-                  }}
-                >
+              <Link href={product.href} className="group flex flex-col">
+                <SpotlightCard className="relative w-full aspect-4/3 rounded-2xl bg-white">
                   {product.logo && (
                     <Image
                       src={product.logo}
@@ -103,7 +130,7 @@ export const ProductsSection = () => {
                       className={product.imageClassName}
                     />
                   )}
-                </div>
+                </SpotlightCard>
                 <div className="pt-4">
                   <p className="font-gilroy font-black text-2xl text-foreground mb-0.5 group-hover:text-primary transition-colors duration-200">
                     {product.label}
@@ -172,7 +199,7 @@ export const ProductsSection = () => {
           <SlideTextButton
             href="/productos"
             label="Ver todos los productos"
-            className="px-7 py-3 rounded-xl border-2 border-secondary text-base font-gilroy font-bold text-secondary transition-colors duration-200"
+            className="px-7 py-3 rounded-md border-2 border-secondary text-base font-gilroy font-bold text-secondary transition-colors duration-200"
           />
         </div>
       </div>
@@ -192,7 +219,6 @@ export const ProductsSection = () => {
             <h3 className="text-4xl md:text-5xl font-gilroy font-black leading-[1.35] tracking-tight mb-8 bg-gradient-to-r from-primary via-0% to-secondary bg-clip-text text-transparent">
               Portal de comercios
             </h3>
-            {/* Lista semántica con role descriptivo */}
             <ul
               aria-label="Funcionalidades del Portal de Comercios"
               className="flex flex-col gap-5 max-w-2xl mx-auto md:mx-0 list-none p-0"

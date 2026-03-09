@@ -62,7 +62,7 @@ function setImg(el: HTMLDivElement, partner: Partner) {
 // ─── Mobile: marquee CSS puro ─────────────────────────────────────
 const MobileCarousel = () => (
   <div
-    className="absolute bottom-5 left-0 right-0 z-10 overflow-hidden"
+    className="absolute bottom-25 left-0 right-0 z-10 overflow-hidden"
     aria-label="Marcas asociadas"
     role="region"
     style={{

@@ -6,7 +6,7 @@ import { Header } from "@/components/layout/header";
 import "@/app/globals.css";
 
 export const metadata: Metadata = {
-  title: "Developers | Dinelco",
+  title: "Dinelco | Platform",
   description:
     "Plataforma fintech de la red dinelco para desarrolladores, con documentación, guías y recursos para integrar nuestros servicios de pago en tus aplicaciones.",
 };
