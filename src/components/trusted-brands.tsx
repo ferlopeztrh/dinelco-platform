@@ -47,6 +47,9 @@ const COLOR_LIMIT = 40;
 const STICKY_LIMIT = 80;
 const BOTTOM_OFFSET = 20;
 
+// Delay coordinado con el header (0.4s) + su duración (0.7s)
+const REVEAL_DELAY = 0.4;
+
 function logoSrc(logo: any): string {
   return typeof logo === "string" ? logo : (logo as { src: string }).src;
 }
@@ -76,9 +79,7 @@ const MobileCarousel = () => (
         100% { transform: translateX(-50%); }
       }
       .tb-marquee { animation: marquee 18s linear infinite; }
-      @media (prefers-reduced-motion: reduce) {
-        .tb-marquee { animation: none; }
-      }
+      @media (prefers-reduced-motion: reduce) { .tb-marquee { animation: none; } }
     `}</style>
     <div
       className="tb-marquee flex items-center gap-10"
@@ -110,20 +111,20 @@ const MobileCarousel = () => (
   </div>
 );
 
-// ─── Desktop: lógica GSAP ────────────────────────────────────────
+// ─── Desktop ──────────────────────────────────────────────────────
 const DesktopBrands = () => {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const slotsRef = useRef<HTMLDivElement[]>([]);
   const layers = useRef<Array<[HTMLDivElement, HTMLDivElement]>>([]);
   const activeLayer = useRef<number[]>([0, 0, 0, 0, 0]);
   const groupIndex = useRef(0);
   const isWhite = useRef(true);
   const isFixed = useRef(true);
 
+  // Scroll: sticky vs absolute + color
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-
-    // Buscar el hero section — el ancestor con data-hero
     const heroSection = el.closest("[data-hero]") as HTMLElement | null;
 
     const setFixed = () => {
@@ -137,7 +138,6 @@ const DesktopBrands = () => {
 
     const setAbsolute = (scrollY: number) => {
       isFixed.current = false;
-      // Posicion absoluta relativa al hero
       const heroTop = heroSection
         ? heroSection.getBoundingClientRect().top + scrollY
         : 0;
@@ -153,7 +153,6 @@ const DesktopBrands = () => {
     };
 
     const applyState = (scrollY: number) => {
-      // Color
       const shouldBeWhite = scrollY < COLOR_LIMIT;
       if (shouldBeWhite !== isWhite.current) {
         isWhite.current = shouldBeWhite;
@@ -161,43 +160,50 @@ const DesktopBrands = () => {
           ? "brightness(0) invert(1)"
           : "brightness(1) invert(0)";
       }
-
-      // Sticky vs absolute — solo actúa dentro del hero
       const heroBottom = heroSection
         ? heroSection.getBoundingClientRect().bottom
         : window.innerHeight - scrollY;
-
-      // Si el hero ya salió del viewport al montar (F5 al final) → absolute fijo
-      // Si estamos dentro del hero → lógica normal de scroll
       if (heroBottom <= 0) {
-        // Hero ya pasó — no mostrar fixed nunca
         if (isFixed.current) setAbsolute(scrollY);
         return;
       }
-
       const shouldBeFixed = scrollY < STICKY_LIMIT;
       if (shouldBeFixed !== isFixed.current) {
-        if (shouldBeFixed) {
-          setFixed();
-        } else {
-          setAbsolute(scrollY);
-        }
+        shouldBeFixed ? setFixed() : setAbsolute(scrollY);
       }
     };
 
-    // Aplicar estado correcto al montar — cubre F5 en cualquier posición
     applyState(window.scrollY);
-
     const onScroll = () => applyState(window.scrollY);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // GSAP cycling
+  // Reveal inicial + cycling
   useEffect(() => {
+    const slots = slotsRef.current;
+    if (!slots.length) return;
+
+    // Estado inicial: invisible
+    gsap.set(slots, { yPercent: 120, opacity: 0 });
+
+    // Layer B también invisible para el cycling
     layers.current.forEach(([, b]) =>
       gsap.set(b, { yPercent: 110, opacity: 0 }),
     );
+
+    // Reveal — cada slot entra desde abajo con stagger
+    // Delay coordinado para que entre después del header
+    const reveal = gsap.to(slots, {
+      yPercent: 0,
+      opacity: 1,
+      duration: 0.7,
+      ease: "power3.out",
+      stagger: 0.07,
+      delay: REVEAL_DELAY,
+      // Cuando termina el reveal, arranca el cycling
+      onComplete: () => gsap.delayedCall(PAUSE, cycle),
+    });
 
     function cycle() {
       const nextGroupIdx = (groupIndex.current + 1) % groups.length;
@@ -235,9 +241,8 @@ const DesktopBrands = () => {
       });
     }
 
-    gsap.delayedCall(PAUSE, cycle);
-
     return () => {
+      reveal.kill();
       gsap.globalTimeline.clear();
     };
   }, []);
@@ -263,6 +268,9 @@ const DesktopBrands = () => {
       {groups[0]!.map((partner, i) => (
         <div
           key={partner.name}
+          ref={(el) => {
+            if (el) slotsRef.current[i] = el;
+          }}
           style={{
             width: SLOT_W,
             height: SLOT_H,

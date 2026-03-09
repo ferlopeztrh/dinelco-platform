@@ -1,8 +1,25 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { useRef, useEffect } from "react";
 import backgroundD from "@/assets/patterns/background-d.png";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
+
+function parseStatValue(val: string) {
+  const prefix = val.startsWith("+") ? "+" : "";
+  const clean = val.replace("+", "").replace("%", "");
+  const suffix = val.endsWith("%") ? "%" : "";
+  const hasDot = clean.includes(".");
+  const number = parseFloat(clean.replace(/\./g, "").replace(",", "."));
+  return { prefix, number, suffix, hasDot, raw: val };
+}
+
+function formatNumber(n: number, hasDot: boolean) {
+  if (!hasDot) return String(Math.round(n));
+  return Math.round(n).toLocaleString("es-PY").replace(/,/g, ".");
+}
 
 const stats = [
   {
@@ -83,34 +100,47 @@ const stats = [
 ];
 
 export const StatsSection = () => {
-  const sectionRef = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
+  const numberEls = useRef<HTMLElement[]>([]);
 
   useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setVisible(true);
-      return;
-    }
+    const nums = numberEls.current.filter(Boolean);
+    const sts: ReturnType<typeof ScrollTrigger.create>[] = [];
 
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          obs.disconnect();
-        }
-      },
-      { threshold: 0.15 },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
+    nums.forEach((el, i) => {
+      const parsed = parseStatValue(stats[i]!.value);
+      el.textContent = `${parsed.prefix}0${parsed.suffix}`;
+
+      sts.push(
+        ScrollTrigger.create({
+          trigger: el,
+          start: "top 88%",
+          once: true,
+          onEnter: () => {
+            const obj = { val: 0 };
+            gsap.to(obj, {
+              val: parsed.number,
+              duration: 2,
+              ease: "power2.out",
+              delay: i * 0.1,
+              onUpdate() {
+                el.textContent = `${parsed.prefix}${formatNumber(obj.val, parsed.hasDot)}${parsed.suffix}`;
+              },
+              onComplete() {
+                el.textContent = parsed.raw;
+              },
+            });
+          },
+        }),
+      );
+    });
+
+    return () => sts.forEach((st) => st.kill());
   }, []);
 
   return (
     <section
-      ref={sectionRef}
       aria-labelledby="stats-heading"
       className="relative overflow-hidden py-6"
     >
@@ -118,7 +148,6 @@ export const StatsSection = () => {
         Dinelco en números
       </h2>
 
-      {/* Fondo estático — sin backgroundAttachment:fixed que causaba repaint global */}
       <div
         aria-hidden
         className="absolute inset-0 pointer-events-none select-none"
@@ -139,25 +168,22 @@ export const StatsSection = () => {
           {stats.map(({ value, label, icon }, i) => (
             <div
               key={label}
-              className={cn(
-                "bg-white rounded-2xl p-6 flex flex-col gap-4 shadow-lg",
-                "transition-[opacity,transform] duration-600 ease-out",
-                visible
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-6",
-              )}
-              style={{ transitionDelay: `${i * 80}ms` }}
+              className="bg-white rounded-2xl p-6 flex flex-col gap-4 shadow-lg"
             >
               <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
                 {icon}
               </div>
               <div>
                 <dt className="sr-only">{label}</dt>
-                <dd
-                  className="text-4xl md:text-5xl font-gilroy font-bold text-foreground leading-none mb-2"
-                  aria-label={`${value} — ${label}`}
-                >
-                  {value}
+                <dd aria-label={`${value} — ${label}`}>
+                  <span
+                    ref={(el) => {
+                      if (el) numberEls.current[i] = el;
+                    }}
+                    className="text-4xl md:text-5xl font-gilroy font-bold text-foreground leading-none block mb-2 tabular-nums"
+                  >
+                    {value}
+                  </span>
                 </dd>
                 <p
                   className="text-base font-semibold text-label font-notosans leading-snug"

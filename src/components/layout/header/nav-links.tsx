@@ -57,37 +57,36 @@ export const NAV_LINKS: NavItem[] = [
       },
     ],
   },
-  { label: "Nuestros clientes", href: "/clientes" },
-  { label: "Sobre nosotros", href: "/nosotros" },
   {
     label: "Documentación",
     submenu: [
       {
-        category: "Referencia",
+        category: "Conoce",
         links: [
           {
-            label: "Documentación",
-            href: "https://docs.dinelco.com",
-            description: "Guías y referencia de todas las APIs",
-          },
-          {
-            label: "Explorador de API",
+            label: "Centro de conocimiento",
             href: "https://docs.dinelco.com/api-explorer",
-            description: "Probá los endpoints en vivo",
+            description:
+              "Mantenete al día con las novedades de la plataforma fintech",
           },
         ],
       },
       {
-        category: "Ayuda",
+        category: "Desarrolladores",
         links: [
           {
-            label: "CAC — 021 620 6000",
-            href: "tel:0216206000",
-            description: "Centro de Atención al Cliente",
+            label: "Documentación para desarrolladores",
+            href: "https://docs.dinelco.com",
+            description: "Empezar a integrar",
+          },
+          {
+            label: "Referencias API",
+            href: "https://docs.dinelco.com/api-explorer",
+            description: "Guías y referencia de todas las APIs",
           },
         ],
       },
     ],
   },
-  { label: "Precios", href: "/precios" },
+  { label: "Sobre nosotros", href: "/nosotros" },
 ];

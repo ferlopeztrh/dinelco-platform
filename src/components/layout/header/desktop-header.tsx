@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CircleUserRound, X, Globe } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, useReducer } from "react";
 import { cn } from "@/lib/utils";
 import { SlideTextButton } from "@/components/ui/slide-text-button";
 import { DinelcoLogoSvg } from "@/components/icons/dinelco-logo.svg";
@@ -11,9 +11,30 @@ import { useIsOverHero } from "@/hooks/use-hero-scroll";
 
 type Lang = "es" | "en";
 
+// useReducer para colapsar los dos setState de onMouseLeave en un solo dispatch
+// → un solo re-render en vez de dos
+type HoverState = { openMenu: string | null; hoveredLink: string | null };
+type HoverAction =
+  | { type: "open"; menu: string }
+  | { type: "hover"; link: string }
+  | { type: "clear" };
+
+function hoverReducer(state: HoverState, action: HoverAction): HoverState {
+  switch (action.type) {
+    case "open":
+      return { openMenu: action.menu, hoveredLink: null };
+    case "hover":
+      return { openMenu: null, hoveredLink: action.link };
+    case "clear":
+      return { openMenu: null, hoveredLink: null };
+  }
+}
+
 export const DesktopHeader = () => {
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [hoveredLink, setHoveredLink] = useState<string | null>(null);
+  const [{ openMenu, hoveredLink }, dispatch] = useReducer(hoverReducer, {
+    openMenu: null,
+    hoveredLink: null,
+  });
   const [lang, setLang] = useState<Lang>("es");
   const isOverHero = useIsOverHero();
 
@@ -24,10 +45,19 @@ export const DesktopHeader = () => {
   const navTextColor = isTransparent ? "text-white" : "text-black";
   const dividerColor = isTransparent ? "bg-white/30" : "bg-gray-200";
 
+  // Calcular el set de opacidades una sola vez por render en vez de llamar
+  // getOpacity() individualmente por cada item del nav
+  const dimmedSet = useMemo(
+    () =>
+      anyActive
+        ? new Set([openMenu, hoveredLink].filter(Boolean) as string[])
+        : null,
+    [anyActive, openMenu, hoveredLink],
+  );
+
   const getOpacity = (label: string) => {
-    if (!anyActive) return 1;
-    if (openMenu === label || hoveredLink === label) return 1;
-    return 0.4;
+    if (!dimmedSet) return 1;
+    return dimmedSet.has(label) ? 1 : 0.4;
   };
 
   const toggleLang = () => setLang((l) => (l === "es" ? "en" : "es"));
@@ -35,10 +65,7 @@ export const DesktopHeader = () => {
   return (
     <div
       className="w-full relative"
-      onMouseLeave={() => {
-        setOpenMenu(null);
-        setHoveredLink(null);
-      }}
+      onMouseLeave={() => dispatch({ type: "clear" })} // un solo dispatch → un solo re-render
     >
       {/* Submenu panels */}
       {NAV_LINKS.filter((i) => i.submenu).map((item) => (
@@ -52,7 +79,7 @@ export const DesktopHeader = () => {
             "transition-[grid-template-rows] duration-300 ease-in-out",
             openMenu === item.label ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
           )}
-          onMouseLeave={() => setOpenMenu(null)}
+          onMouseLeave={() => dispatch({ type: "clear" })}
         >
           <div className="overflow-hidden">
             <div className="h-[68px]" aria-hidden />
@@ -75,7 +102,7 @@ export const DesktopHeader = () => {
                       <Link
                         key={link.href}
                         href={link.href}
-                        onClick={() => setOpenMenu(null)}
+                        onClick={() => dispatch({ type: "clear" })}
                         className="group/link flex items-baseline gap-3 transition-opacity duration-150 group-hover/submenu:opacity-40 hover:!opacity-100"
                       >
                         <span className="text-[1.35rem] font-gilroy font-semibold text-foreground">
@@ -101,7 +128,7 @@ export const DesktopHeader = () => {
               </nav>
               <div className="shrink-0 self-start">
                 <button
-                  onClick={() => setOpenMenu(null)}
+                  onClick={() => dispatch({ type: "clear" })}
                   aria-label={`Cerrar submenu de ${item.label}`}
                   className="w-10 h-10 flex items-center justify-center rounded-md bg-gray-100 hover:bg-gray-200 transition-colors duration-150 text-foreground"
                 >
@@ -122,10 +149,18 @@ export const DesktopHeader = () => {
         aria-hidden
       />
 
-      {/* Header bar */}
+      {/*
+       * Header bar — backgroundColor via data-attr + CSS en vez de style prop inline.
+       * Así el cambio de fondo es 100% CSS (transition en la clase), React no tiene
+       * que recalcular un objeto de estilo en cada render de isOverHero.
+       */}
       <div
-        className="relative z-10 w-full px-6 h-[68px] flex items-center transition-colors duration-300"
-        style={{ backgroundColor: isTransparent ? "transparent" : "white" }}
+        data-transparent={isTransparent ? "true" : undefined}
+        className={cn(
+          "relative z-10 w-full px-6 h-[68px] flex items-center",
+          "bg-white data-[transparent]:bg-transparent",
+          "transition-[background-color] duration-300",
+        )}
       >
         <Link
           href="/"
@@ -156,10 +191,9 @@ export const DesktopHeader = () => {
             item.submenu ? (
               <button
                 key={item.label}
-                onMouseEnter={() => {
-                  setOpenMenu(item.label);
-                  setHoveredLink(null);
-                }}
+                onMouseEnter={() =>
+                  dispatch({ type: "open", menu: item.label })
+                }
                 aria-expanded={openMenu === item.label}
                 aria-haspopup="true"
                 className={cn(
@@ -174,11 +208,10 @@ export const DesktopHeader = () => {
               <Link
                 key={item.label}
                 href={item.href!}
-                onMouseEnter={() => {
-                  setHoveredLink(item.label);
-                  setOpenMenu(null);
-                }}
-                onMouseLeave={() => setHoveredLink(null)}
+                onMouseEnter={() =>
+                  dispatch({ type: "hover", link: item.label })
+                }
+                onMouseLeave={() => dispatch({ type: "clear" })}
                 className={cn(
                   "px-4 h-[68px] flex items-center text-base font-gilroy font-semibold whitespace-nowrap transition-[opacity,color] duration-200",
                   navTextColor,
@@ -199,8 +232,8 @@ export const DesktopHeader = () => {
               navTextColor,
             )}
             style={{ opacity: getOpacity("lang") }}
-            onMouseEnter={() => setHoveredLink("lang")}
-            onMouseLeave={() => setHoveredLink(null)}
+            onMouseEnter={() => dispatch({ type: "hover", link: "lang" })}
+            onMouseLeave={() => dispatch({ type: "clear" })}
             aria-label={
               lang === "es"
                 ? "Cambiar idioma a inglés"
@@ -225,8 +258,8 @@ export const DesktopHeader = () => {
               navTextColor,
             )}
             style={{ opacity: getOpacity("profile") }}
-            onMouseEnter={() => setHoveredLink("profile")}
-            onMouseLeave={() => setHoveredLink(null)}
+            onMouseEnter={() => dispatch({ type: "hover", link: "profile" })}
+            onMouseLeave={() => dispatch({ type: "clear" })}
             aria-label="Mi cuenta"
           >
             <CircleUserRound size={20} strokeWidth={1.75} aria-hidden />
@@ -236,7 +269,7 @@ export const DesktopHeader = () => {
             as="link"
             href="/contacto"
             label="Contactar"
-            className="ml-1 px-6 py-3 rounded-md text-[15px] bg-primary"
+            className="ml-1 px-6 py-3 rounded-md text-base bg-primary"
           />
         </div>
       </div>

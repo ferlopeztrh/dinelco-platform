@@ -3,6 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
 import checkoutLogo from "@/assets/products/checkout-logo.png";
 import linkLogo from "@/assets/products/link-logo.png";
 import posLogo from "@/assets/products/pos-logo.png";
@@ -10,6 +13,9 @@ import portalImage from "@/assets/products/portal-comercios.png";
 import pattern1 from "@/assets/patterns/pattern1.svg";
 import pattern2 from "@/assets/patterns/pattern2.svg";
 import { SlideTextButton } from "../ui/slide-text-button";
+import { PortalComerciosSection } from "./portal-comercios-section";
+
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const products = [
   {
@@ -41,8 +47,6 @@ const products = [
 const VISIBLE_MOBILE = 1.15;
 const SIDE_PADDING = 24;
 
-// Componente interno para manejar el spotlight con listeners pasivos
-// Evita que React synthetic onMouseMove bloquee el hilo principal
 function SpotlightCard({
   children,
   className,
@@ -51,32 +55,25 @@ function SpotlightCard({
   className?: string;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const card = cardRef.current;
     if (!card) return;
-
     const handleMove = (e: MouseEvent) => {
-      const rect = card.getBoundingClientRect();
-      card.style.setProperty("--x", `${e.clientX - rect.left}px`);
-      card.style.setProperty("--y", `${e.clientY - rect.top}px`);
+      const r = card.getBoundingClientRect();
+      card.style.setProperty("--x", `${e.clientX - r.left}px`);
+      card.style.setProperty("--y", `${e.clientY - r.top}px`);
     };
     const handleLeave = () => {
       card.style.setProperty("--x", "-999px");
       card.style.setProperty("--y", "-999px");
     };
-
-    // passive:true — el browser sabe que no vamos a llamar preventDefault()
-    // → puede scrollear sin esperar a que termine nuestro handler
     card.addEventListener("mousemove", handleMove, { passive: true });
     card.addEventListener("mouseleave", handleLeave, { passive: true });
-
     return () => {
       card.removeEventListener("mousemove", handleMove);
       card.removeEventListener("mouseleave", handleLeave);
     };
   }, []);
-
   return (
     <div ref={cardRef} className={`spotlight-card ${className ?? ""}`}>
       {children}
@@ -85,12 +82,88 @@ function SpotlightCard({
 }
 
 export const ProductsSection = () => {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const gridRef = useRef<HTMLUListElement>(null);
+  const productEls = useRef<HTMLLIElement[]>([]);
+
+  // ── Título ───────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    const init = () => {
+      const split = new SplitText(el, {
+        type: "lines",
+        linesClass: "line-inner",
+      });
+      split.lines.forEach((line) => {
+        const mask = document.createElement("div");
+        mask.style.cssText = "overflow:hidden;display:block;";
+        line.parentNode?.insertBefore(mask, line);
+        mask.appendChild(line);
+      });
+      gsap.set(split.lines, { yPercent: 105 });
+      const st = ScrollTrigger.create({
+        trigger: el,
+        start: "top 82%",
+        once: true,
+        onEnter: () =>
+          gsap.to(split.lines, {
+            yPercent: 0,
+            duration: 1,
+            ease: "power4.out",
+            stagger: 0.1,
+          }),
+      });
+      return () => {
+        st.kill();
+        split.lines.forEach((line) => {
+          const mask = line.parentElement;
+          if (mask && mask !== el) {
+            mask.parentNode?.insertBefore(line, mask);
+            mask.parentNode?.removeChild(mask);
+          }
+        });
+        split.revert();
+      };
+    };
+    if (document.fonts.status === "loaded") return init();
+    let cleanup: (() => void) | undefined;
+    document.fonts.ready.then(() => {
+      cleanup = init();
+    });
+    return () => cleanup?.();
+  }, []);
+
+  // ── Cards: scrub ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const cards = productEls.current.filter(Boolean);
+    if (!cards.length) return;
+    gsap.set(cards, { y: 100, scale: 0.95 });
+    const cardSTs = cards.map((card, i) =>
+      gsap.fromTo(
+        card,
+        { y: 100, scale: 0.95 },
+        {
+          y: 0,
+          scale: 1,
+          ease: "power2.out",
+          scrollTrigger: {
+            trigger: gridRef.current,
+            start: `top ${95 - i * 8}%`,
+            end: `top ${45 - i * 4}%`,
+            scrub: 1.2,
+          },
+        },
+      ),
+    );
+    return () => cardSTs.forEach((t) => t.scrollTrigger?.kill());
+  }, []);
+
   return (
     <section
       aria-label="Productos Dinelco"
       className="relative overflow-hidden py-20"
     >
-      {/* Patterns decorativos — solo desktop */}
       <div
         className="hidden md:block absolute left-12 top-42 -translate-y-1/2 w-56 pointer-events-none select-none opacity-25"
         aria-hidden
@@ -105,9 +178,11 @@ export const ProductsSection = () => {
       </div>
 
       <div className="relative px-6 md:px-64">
-        {/* Título */}
         <div className="max-w-3xl mx-auto text-left mb-10 md:mb-12">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-gilroy font-semibold leading-[1.35] tracking-tight">
+          <h2
+            ref={titleRef}
+            className="text-2xl sm:text-3xl md:text-4xl font-gilroy font-semibold leading-[1.35] tracking-tight"
+          >
             Un ecosistema de pagos pensado para tu negocio,{" "}
             <span className="font-black bg-linear-to-r from-primary via-primary via-0% to-secondary bg-clip-text text-transparent">
               todos bajo la misma red.
@@ -115,10 +190,17 @@ export const ProductsSection = () => {
           </h2>
         </div>
 
-        {/* Desktop: grid */}
-        <ul className="hidden md:grid grid-cols-3 gap-6 list-none p-0">
-          {products.map((product) => (
-            <li key={product.href}>
+        <ul
+          ref={gridRef}
+          className="hidden md:grid grid-cols-3 gap-6 list-none p-0"
+        >
+          {products.map((product, i) => (
+            <li
+              key={product.href}
+              ref={(el) => {
+                if (el) productEls.current[i] = el;
+              }}
+            >
               <Link href={product.href} className="group flex flex-col">
                 <SpotlightCard className="relative w-full aspect-4/3 rounded-2xl bg-white">
                   {product.logo && (
@@ -144,7 +226,6 @@ export const ProductsSection = () => {
           ))}
         </ul>
 
-        {/* Mobile: scroll nativo con CSS snap */}
         <div className="md:hidden -mx-6">
           <ul
             role="region"
@@ -194,7 +275,6 @@ export const ProductsSection = () => {
           </ul>
         </div>
 
-        {/* CTA */}
         <div className="flex justify-center mt-10">
           <SlideTextButton
             href="/productos"
@@ -204,44 +284,7 @@ export const ProductsSection = () => {
         </div>
       </div>
 
-      {/* Portal Comercios feature */}
-      <div className="relative mt-12 px-6 md:px-48">
-        <div className="flex flex-col-reverse md:flex-row items-center gap-10 md:gap-16">
-          <div className="w-full md:w-1/2 shrink-0">
-            <Image
-              src={portalImage}
-              alt="Pantalla del Portal de Comercios Dinelco en laptop y móvil"
-              className="w-full object-contain"
-              loading="lazy"
-            />
-          </div>
-          <div className="w-full md:w-1/2 text-left">
-            <h3 className="text-4xl md:text-5xl font-gilroy font-black leading-[1.35] tracking-tight mb-8 bg-gradient-to-r from-primary via-0% to-secondary bg-clip-text text-transparent">
-              Portal de comercios
-            </h3>
-            <ul
-              aria-label="Funcionalidades del Portal de Comercios"
-              className="flex flex-col gap-5 max-w-2xl mx-auto md:mx-0 list-none p-0"
-            >
-              <li className="font-notosans text-base font-bold md:text-lg text-label leading-relaxed">
-                Accedé a información detallada y en línea de todas las
-                transacciones realizadas en tu negocio.
-              </li>
-              <li className="font-notosans text-base font-bold md:text-lg text-label leading-relaxed">
-                Monitoreá tus ventas por sucursal y/o producto y accedé a tus
-                facturas.
-              </li>
-              <li className="font-notosans text-base font-bold md:text-lg text-label leading-relaxed">
-                Solicitá soporte técnico, accesorios o chateá con nuestro centro
-                de atención.
-              </li>
-            </ul>
-            <p className="font-gilroy font-semibold text-sm text-secondary mt-8">
-              * Beneficio para todos los comercios afiliados a la red dinelco.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PortalComerciosSection />
     </section>
   );
 };

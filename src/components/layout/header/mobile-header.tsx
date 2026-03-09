@@ -5,7 +5,6 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
-  Menu,
   CircleUserRound,
   Globe,
 } from "lucide-react";
@@ -25,33 +24,62 @@ export const MobileHeader = () => {
     setMenuOpen(false);
     setActiveSubmenu(null);
   };
-
   const toggleLang = () => setLang((l) => (l === "es" ? "en" : "es"));
+  const inSub = !!activeSubmenu;
 
   return (
-    <div
-      className={cn(
-        "fixed z-[200] transition-[inset,border-radius] duration-300 ease-in-out bg-white",
-        menuOpen ? "inset-0 rounded-none" : "top-3 left-4 right-4 rounded-md",
-      )}
-      style={{
-        border: menuOpen ? "none" : "1px solid rgba(0,0,0,0.08)",
-      }}
-    >
-      {/* Barra superior */}
-      <div className="flex items-center justify-between px-4 h-[52px]">
-        <Link
-          href="/"
-          onClick={menuOpen ? closeAll : undefined}
-          aria-label="Red dinelco — Ir al inicio"
-          className="flex items-center"
-        >
-          <DinelcoLogoSvg width={120} height={40} />
-        </Link>
+    <>
+      {/* ── Topbar fija — siempre visible, nunca animada ── */}
+      <div
+        className={cn(
+          "fixed z-[201] flex items-center justify-between px-4 h-[52px] bg-white",
+          "transition-[inset,border-radius,border-color] duration-300 ease-in-out",
+          menuOpen
+            ? "top-0 left-0 right-0 rounded-none border-b border-gray-100"
+            : "top-3 left-4 right-4 rounded-md border border-black/[0.08]",
+        )}
+      >
+        {/* Zona izquierda: ticker logo ↔ título */}
+        <div className="flex-1 h-[52px] overflow-hidden">
+          <div
+            className="transition-transform duration-300 ease-in-out"
+            style={{ transform: inSub ? "translateY(-52px)" : "translateY(0)" }}
+          >
+            {/* Fila 0 — Logo */}
+            <div className="h-[52px] flex items-center">
+              <Link
+                href="/"
+                onClick={menuOpen ? closeAll : undefined}
+                aria-label="Red dinelco — Ir al inicio"
+              >
+                <DinelcoLogoSvg width={120} height={40} />
+              </Link>
+            </div>
+            {/* Fila 1 — Volver + título submenu */}
+            <div className="h-[52px] flex items-center">
+              <button
+                type="button"
+                onClick={() => setActiveSubmenu(null)}
+                aria-label="Volver al menú principal"
+                className="flex items-center gap-1.5 font-gilroy font-semibold text-[1.1rem] text-foreground"
+              >
+                <ChevronLeft
+                  size={18}
+                  strokeWidth={1.75}
+                  className="text-gray-400 shrink-0"
+                  aria-hidden
+                />
+                {activeSubmenu?.label ?? ""}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Botón hamburguesa / cerrar */}
         <button
           type="button"
           onClick={() => (menuOpen ? closeAll() : setMenuOpen(true))}
-          className="w-9 h-9 flex items-center justify-center"
+          className="w-9 h-9 flex items-center justify-center shrink-0"
           aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={menuOpen}
           aria-controls="mobile-nav"
@@ -59,32 +87,64 @@ export const MobileHeader = () => {
           {menuOpen ? (
             <X size={20} strokeWidth={1.75} aria-hidden />
           ) : (
-            <Menu size={20} strokeWidth={1.75} aria-hidden />
+            <svg
+              width="20"
+              height="12"
+              viewBox="0 0 20 12"
+              fill="none"
+              aria-hidden
+            >
+              <line
+                x1="0"
+                y1="1"
+                x2="20"
+                y2="1"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+              <line
+                x1="0"
+                y1="11"
+                x2="20"
+                y2="11"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </svg>
           )}
         </button>
       </div>
 
-      {/* Contenido expandido */}
+      {/* ── Panel que cae desde arriba ── */}
+      {/*
+       * El panel está SIEMPRE en el DOM (no condicional) para que la
+       * transición de cierre también se vea. Se posiciona justo debajo
+       * de la topbar (top-[52px]) y usa translateY + opacity para el slide.
+       * overflow-hidden en el panel mismo contiene el scroll interno
+       * sin afectar al contenedor externo.
+       */}
       <div
         id="mobile-nav"
-        className={cn(
-          "overflow-hidden transition-[height,opacity] duration-300 ease-in-out",
-          menuOpen ? "opacity-100" : "opacity-0 pointer-events-none h-0",
-        )}
-        style={menuOpen ? { height: "calc(100dvh - 52px)" } : {}}
         aria-hidden={!menuOpen}
+        className={cn(
+          "fixed left-0 right-0 z-[200] bg-white",
+          "top-[52px]",
+          "transition-[transform,opacity] duration-300 ease-in-out",
+          menuOpen
+            ? "translate-y-0 opacity-100 pointer-events-auto"
+            : "-translate-y-6 opacity-0 pointer-events-none",
+        )}
+        style={{ height: "calc(100dvh - 52px)" }}
       >
-        {/* ── Pantalla raíz ── */}
+        {/* Pantalla raíz */}
         <div
-          className={cn(
-            "absolute inset-x-0 flex flex-col transition-opacity duration-200",
-            activeSubmenu ? "opacity-0 pointer-events-none" : "opacity-100",
-          )}
-          style={{ top: 52, bottom: 0 }}
-          aria-hidden={!!activeSubmenu}
+          className="absolute inset-0 flex flex-col overflow-hidden"
+          style={{ display: inSub ? "none" : undefined }}
+          aria-hidden={inSub}
         >
           <div className="h-px bg-gray-100 mx-6" aria-hidden />
-
           <nav
             aria-label="Navegación principal"
             className="flex-1 overflow-y-auto px-6 pt-2"
@@ -98,7 +158,6 @@ export const MobileHeader = () => {
                   <button
                     type="button"
                     onClick={() => setActiveSubmenu(item)}
-                    aria-expanded={activeSubmenu?.label === item.label}
                     aria-haspopup="true"
                     className="w-full flex items-center justify-between py-4 text-[1.1rem] font-gilroy font-semibold text-foreground"
                   >
@@ -128,13 +187,11 @@ export const MobileHeader = () => {
               </div>
             ))}
           </nav>
-
-          {/* Footer del menú */}
           <div className="px-6 py-6 border-t border-gray-100 flex flex-col gap-3">
             <button
               type="button"
               onClick={toggleLang}
-              className="flex items-center gap-3 text-[0.95rem] text-foreground font-medium font-notosans"
+              className="flex items-center gap-3 text-base text-foreground font-semibold font-gilroy"
               aria-label={
                 lang === "es"
                   ? "Cambiar idioma a inglés"
@@ -144,7 +201,7 @@ export const MobileHeader = () => {
               <Globe
                 size={18}
                 strokeWidth={1.75}
-                className="text-gray-500"
+                className="text-foreground"
                 aria-hidden
               />
               {lang === "es" ? "Español" : "English"}
@@ -152,12 +209,12 @@ export const MobileHeader = () => {
             <Link
               href="/portal"
               onClick={closeAll}
-              className="flex items-center gap-3 text-[0.95rem] text-foreground font-medium font-notosans"
+              className="flex items-center gap-3 text-base text-foreground font-semibold font-gilroy"
             >
               <CircleUserRound
                 size={18}
                 strokeWidth={1.75}
-                className="text-gray-500"
+                className="text-foreground"
                 aria-hidden
               />
               Iniciar sesión
@@ -165,35 +222,20 @@ export const MobileHeader = () => {
             <Link
               href="/contacto"
               onClick={closeAll}
-              className="mt-1 block w-full py-3 rounded-xl text-[15px] font-gilroy font-semibold text-white text-center bg-primary"
+              className="mt-1 block w-full py-3 rounded-md text-base font-gilroy font-semibold text-white text-center bg-primary"
             >
               Contactar
             </Link>
           </div>
         </div>
 
-        {/* ── Pantalla submenu ── */}
+        {/* Pantalla submenu */}
         <div
-          className={cn(
-            "absolute inset-x-0 flex flex-col bg-white transition-opacity duration-200",
-            activeSubmenu ? "opacity-100" : "opacity-0 pointer-events-none",
-          )}
-          style={{ top: 52, bottom: 0 }}
-          aria-hidden={!activeSubmenu}
+          className="absolute inset-0 flex flex-col overflow-hidden"
+          style={{ display: inSub ? undefined : "none" }}
+          aria-hidden={!inSub}
         >
           <div className="h-px bg-gray-100 mx-6" aria-hidden />
-          <div className="flex items-center px-6 py-4 border-b border-gray-100">
-            <button
-              type="button"
-              onClick={() => setActiveSubmenu(null)}
-              className="flex items-center gap-2 font-gilroy font-semibold text-[1.1rem] text-foreground"
-              aria-label={`Volver al menú principal desde ${activeSubmenu?.label}`}
-            >
-              <ChevronLeft size={20} strokeWidth={1.75} aria-hidden />
-              {activeSubmenu?.label}
-            </button>
-          </div>
-
           <nav
             aria-label={`Submenu de ${activeSubmenu?.label}`}
             className="flex-1 overflow-y-auto px-6 py-4"
@@ -225,6 +267,17 @@ export const MobileHeader = () => {
           </nav>
         </div>
       </div>
-    </div>
+
+      {/* Overlay oscuro detrás del panel */}
+      <div
+        className={cn(
+          "fixed inset-0 z-[199] bg-black/40",
+          "transition-opacity duration-300",
+          menuOpen ? "opacity-100" : "opacity-0 pointer-events-none",
+        )}
+        aria-hidden
+        onClick={closeAll}
+      />
+    </>
   );
 };
