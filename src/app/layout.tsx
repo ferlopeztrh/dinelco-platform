@@ -4,6 +4,10 @@ import type { Metadata } from "next";
 import { Header } from "@/components/layout/header";
 
 import "@/app/globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Dinelco | Platform",
@@ -17,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es-PY">
+    <html lang="es-PY" className={cn("font-sans", geist.variable)}>
       <body
         className={`${gilroy.variable} ${notoSans.variable} antialiased overflow-x-hidden`}
       >
