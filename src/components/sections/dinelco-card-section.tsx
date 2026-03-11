@@ -125,7 +125,7 @@ export function DinelcoCardSection() {
     renderer.toneMappingExposure = 1.4;
     container.appendChild(renderer.domElement);
 
-    const geometry = new RoundedBoxGeometry(1.25, 2, 0.02, 16, 0.12);
+    const geometry = new RoundedBoxGeometry(1.25, 2, 0.055, 16, 0.055);
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d")!;
@@ -212,12 +212,13 @@ export function DinelcoCardSection() {
       clearcoat: 0.6,
     });
     const edgeMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xe8e8e8,
-      metalness: 0.85,
-      roughness: 0.15,
-      clearcoat: 0.95,
-      emissive: 0xcccccc,
-      emissiveIntensity: 0.1,
+      color: 0xd0d0d8,
+      metalness: 0.9,
+      roughness: 0.08,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+      emissive: 0xaaaacc,
+      emissiveIntensity: 0.18,
     });
     const materials = [
       edgeMaterial,

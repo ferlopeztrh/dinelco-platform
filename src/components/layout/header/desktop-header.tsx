@@ -7,12 +7,10 @@ import { cn } from "@/lib/utils";
 import { SlideTextButton } from "@/components/ui/slide-text-button";
 import { DinelcoLogoSvg } from "@/components/icons/dinelco-logo.svg";
 import { NAV_LINKS } from "./nav-links";
-import { useIsOverHero } from "@/hooks/use-hero-scroll";
+import { useHeaderScroll } from "@/hooks/use-header-scroll";
 
 type Lang = "es" | "en";
 
-// useReducer para colapsar los dos setState de onMouseLeave en un solo dispatch
-// → un solo re-render en vez de dos
 type HoverState = { openMenu: string | null; hoveredLink: string | null };
 type HoverAction =
   | { type: "open"; menu: string }
@@ -36,17 +34,16 @@ export const DesktopHeader = () => {
     hoveredLink: null,
   });
   const [lang, setLang] = useState<Lang>("es");
-  const isOverHero = useIsOverHero();
+  const visibility = useHeaderScroll();
 
   const isSubmenuOpen = !!openMenu;
   const anyActive = !!openMenu || !!hoveredLink;
-  const isTransparent = isOverHero && !isSubmenuOpen;
+  // Si hay submenu abierto, forzar fondo blanco aunque estemos en el hero
+  const isTransparent = visibility === "transparent" && !isSubmenuOpen;
 
   const navTextColor = isTransparent ? "text-white" : "text-black";
   const dividerColor = isTransparent ? "bg-white/30" : "bg-gray-200";
 
-  // Calcular el set de opacidades una sola vez por render en vez de llamar
-  // getOpacity() individualmente por cada item del nav
   const dimmedSet = useMemo(
     () =>
       anyActive
@@ -64,8 +61,12 @@ export const DesktopHeader = () => {
 
   return (
     <div
-      className="w-full relative"
-      onMouseLeave={() => dispatch({ type: "clear" })} // un solo dispatch → un solo re-render
+      className={cn(
+        "w-full fixed top-0 left-0 right-0 z-50",
+        "transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
+        visibility === "hidden" ? "-translate-y-full" : "translate-y-0",
+      )}
+      onMouseLeave={() => dispatch({ type: "clear" })}
     >
       {/* Submenu panels */}
       {NAV_LINKS.filter((i) => i.submenu).map((item) => (
@@ -149,11 +150,6 @@ export const DesktopHeader = () => {
         aria-hidden
       />
 
-      {/*
-       * Header bar — backgroundColor via data-attr + CSS en vez de style prop inline.
-       * Así el cambio de fondo es 100% CSS (transition en la clase), React no tiene
-       * que recalcular un objeto de estilo en cada render de isOverHero.
-       */}
       <div
         data-transparent={isTransparent ? "true" : undefined}
         className={cn(

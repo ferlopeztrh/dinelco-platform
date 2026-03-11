@@ -34,13 +34,37 @@ export function useSplitText<T extends HTMLElement>(
 
   const ref = useRef<T>(null);
 
+  // Guardamos las opciones en un ref para que el useEffect no necesite
+  // declararlas como dependencias — son estáticas en todos los usos actuales
+  // y recrear el SplitText + ScrollTrigger en cada render sería costoso.
+  const optsRef = useRef(options);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    const init = () => {
+    // Flag para detectar desmontaje antes de que fonts.ready resuelva
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
+
+    const init = (): (() => void) => {
+      const {
+        splitType = "words",
+        duration = 0.7,
+        stagger = 0.03,
+        ease = "power3.out",
+        from = { opacity: 0, y: 32 },
+        to = { opacity: 1, y: 0 },
+        threshold = 0.15,
+        once = false,
+      } = optsRef.current;
+
+      const wrappers: HTMLElement[] = [];
       let targets: Element[] = [];
-      const wrappers: HTMLElement[] = []; // para limpiar en revert
+
+      // Guardamos la instancia del ST creado en este scope — no usamos
+      // ScrollTrigger.getAll() para no iterar los triggers de otras secciones
+      let st: ScrollTrigger | null = null;
 
       const split = new SplitText(el, {
         type: splitType,
@@ -51,7 +75,6 @@ export function useSplitText<T extends HTMLElement>(
           const isLines = splitType === "lines" || splitType.includes("lines");
 
           if (isLines && self.lines?.length) {
-            // Envolver cada línea en overflow:hidden — efecto "cajón" sin romper estilos del hijo
             self.lines.forEach((line) => {
               const wrapper = document.createElement("div");
               wrapper.style.overflow = "hidden";
@@ -70,40 +93,10 @@ export function useSplitText<T extends HTMLElement>(
           if (!targets.length)
             targets = self.chars || self.words || self.lines || [];
 
-          // Estado inicial
           gsap.set(targets, { ...from });
 
-          const animIn = (fromEnd = false) => {
-            gsap.killTweensOf(targets);
-            gsap.fromTo(
-              targets,
-              { ...from },
-              {
-                ...to,
-                duration,
-                ease,
-                stagger: { each: stagger, from: fromEnd ? "end" : "start" },
-              },
-            );
-          };
-
-          const animOut = (toUp = true) => {
-            gsap.killTweensOf(targets);
-            gsap.to(targets, {
-              ...from,
-              y: toUp
-                ? typeof from.y === "number"
-                  ? -Math.abs(from.y)
-                  : from.y
-                : from.y,
-              duration: duration * 0.6,
-              ease: "power2.in",
-              stagger: { each: stagger * 0.5, from: toUp ? "end" : "start" },
-            });
-          };
-
           if (once) {
-            ScrollTrigger.create({
+            st = ScrollTrigger.create({
               trigger: el,
               start: `top ${(1 - threshold) * 100}%`,
               once: true,
@@ -122,7 +115,7 @@ export function useSplitText<T extends HTMLElement>(
               },
             });
           } else {
-            ScrollTrigger.create({
+            st = ScrollTrigger.create({
               trigger: el,
               start: `top ${(1 - threshold) * 100}%`,
               end: "bottom 10%",
@@ -180,9 +173,10 @@ export function useSplitText<T extends HTMLElement>(
       });
 
       return () => {
-        ScrollTrigger.getAll().forEach((st) => {
-          if (st.trigger === el) st.kill();
-        });
+        // Matar solo el ST de esta instancia — no toca los de otras secciones
+        st?.kill();
+        st = null;
+        gsap.killTweensOf(targets);
         // Limpiar wrappers antes de revert para no dejar divs huérfanos
         wrappers.forEach((w) => {
           const child = w.firstChild;
@@ -194,15 +188,21 @@ export function useSplitText<T extends HTMLElement>(
     };
 
     if (document.fonts.status === "loaded") {
-      return init();
+      cleanup = init();
     } else {
-      let cleanup: (() => void) | undefined;
       document.fonts.ready.then(() => {
-        cleanup = init();
+        // Si el componente se desmontó mientras esperábamos las fuentes,
+        // no inicializamos nada — evita operar sobre un elemento huérfano
+        if (!cancelled) cleanup = init();
       });
-      return () => cleanup?.();
     }
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, []);
+  // Las opciones van en optsRef — no necesitan ser dependencias del effect
 
   return ref;
 }

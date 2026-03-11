@@ -1,201 +1,143 @@
 "use client";
 
-import { useRef, useEffect } from "react";
-import backgroundD from "@/assets/patterns/background-d.png";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
+import { useGSAP } from "@gsap/react";
+import { useRef } from "react";
 
-gsap.registerPlugin(ScrollTrigger);
-
-function parseStatValue(val: string) {
-  const prefix = val.startsWith("+") ? "+" : "";
-  const clean = val.replace("+", "").replace("%", "");
-  const suffix = val.endsWith("%") ? "%" : "";
-  const hasDot = clean.includes(".");
-  const number = parseFloat(clean.replace(/\./g, "").replace(",", "."));
-  return { prefix, number, suffix, hasDot, raw: val };
-}
-
-function formatNumber(n: number, hasDot: boolean) {
-  if (!hasDot) return String(Math.round(n));
-  return Math.round(n).toLocaleString("es-PY").replace(/,/g, ".");
-}
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const stats = [
-  {
-    value: "+371.146",
-    label: "POS instalados en todo el país",
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="2" y="3" width="20" height="14" rx="2" />
-        <path d="M8 21h8M12 17v4" />
-      </svg>
-    ),
-  },
-  {
-    value: "+604",
-    label: "Cajeros automáticos operativos",
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <rect x="3" y="4" width="18" height="16" rx="2" />
-        <path d="M7 8h2m0 0v8m0-8h2M15 8h2v4h-2v4" />
-      </svg>
-    ),
-  },
-  {
-    value: "+363.688",
-    label: "Comercios adheridos a la red",
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
-    ),
-  },
-  {
-    value: "99.9%",
-    label: "Tiempo de actividad histórico",
-    icon: (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      </svg>
-    ),
-  },
+  { label: "Procesado mensualmente", value: "Más de 2.000.000" },
+  { label: "Comercios adheridos", value: "Más de 389.687" },
+  { label: "POS instalados", value: "Más de 397.217" },
+  { label: "Cajeros Automáticos", value: "Más de 604" },
+  { label: "Tiempo de actividad", value: "99,99 %" },
 ];
 
 export const StatsSection = () => {
-  const numberEls = useRef<HTMLElement[]>([]);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const statRowsRef = useRef<HTMLDivElement[]>([]);
 
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  useGSAP(
+    () => {
+      const el = textRef.current;
+      if (!el) return;
 
-    const nums = numberEls.current.filter(Boolean);
-    const sts: ReturnType<typeof ScrollTrigger.create>[] = [];
+      const mm = gsap.matchMedia();
 
-    nums.forEach((el, i) => {
-      const parsed = parseStatValue(stats[i]!.value);
-      el.textContent = `${parsed.prefix}0${parsed.suffix}`;
-
-      sts.push(
+      mm.add("(min-width: 640px)", () => {
         ScrollTrigger.create({
-          trigger: el,
-          start: "top 88%",
-          once: true,
-          onEnter: () => {
-            const obj = { val: 0 };
-            gsap.to(obj, {
-              val: parsed.number,
-              duration: 2,
-              ease: "power2.out",
-              delay: i * 0.1,
-              onUpdate() {
-                el.textContent = `${parsed.prefix}${formatNumber(obj.val, parsed.hasDot)}${parsed.suffix}`;
-              },
-              onComplete() {
-                el.textContent = parsed.raw;
-              },
-            });
-          },
-        }),
-      );
-    });
+          trigger: wrapperRef.current,
+          start: "top top+=120",
+          end: "bottom bottom+=250",
+          pin: el,
+          pinSpacing: false,
+          toggleActions: "play pause resume pause",
+        });
 
-    return () => sts.forEach((st) => st.kill());
-  }, []);
+        const gradientSpan = el.querySelector<HTMLElement>("[data-gradient]");
+        const placeholder = document.createComment("gradient-placeholder");
+        gradientSpan?.parentNode?.replaceChild(placeholder, gradientSpan!);
+
+        const split = new SplitText(el, { type: "words" });
+        placeholder.parentNode?.replaceChild(gradientSpan!, placeholder);
+
+        const targets = [...split.words, gradientSpan].filter(Boolean);
+
+        gsap.fromTo(
+          targets,
+          { opacity: 0.2 },
+          {
+            opacity: 1,
+            stagger: 0.1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: wrapperRef.current,
+              start: "top top+=75",
+              end: "10% top+=75",
+              scrub: 1,
+            },
+          },
+        );
+
+        return () => split.revert();
+      });
+
+      // Reveal stats — todos los breakpoints
+      statRowsRef.current.forEach((row) => {
+        if (!row) return;
+
+        const targets = row.querySelectorAll<HTMLElement>("[data-stat-text]");
+        targets.forEach((target) => {
+          const split = new SplitText(target, { type: "lines" });
+          gsap.set(split.lines, { y: 60 });
+
+          ScrollTrigger.create({
+            trigger: row,
+            start: "top 90%",
+            once: true,
+            onEnter: () => {
+              gsap.to(split.lines, {
+                y: 0,
+                duration: 1,
+                stagger: 0.08,
+                ease: "power3.out",
+              });
+            },
+          });
+        });
+      });
+
+      return () => mm.revert();
+    },
+    { scope: wrapperRef },
+  );
 
   return (
-    <section
-      aria-labelledby="stats-heading"
-      className="relative overflow-hidden py-6"
-    >
-      <h2 id="stats-heading" className="sr-only">
-        Dinelco en números
-      </h2>
-
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none select-none"
-        style={{
-          backgroundImage: `url(${backgroundD.src})`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "1400px",
-          backgroundPosition: "center top",
-        }}
-      />
-
-      <div className="relative mx-auto md:max-w-400 max-w-full px-6 md:px-16">
-        <p className="font-gilroy font-black text-white text-3xl mb-4">
-          La red dinelco en números
-        </p>
-
-        <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {stats.map(({ value, label, icon }, i) => (
-            <div
-              key={label}
-              className="bg-white rounded-2xl p-6 flex flex-col gap-4 shadow-lg"
+    <div ref={wrapperRef} className="relative pt-20 sm:pt-40 mb-60">
+      {/* Texto pinneado */}
+      <div className="px-4 sm:px-6 pt-12 sm:pt-20 mb-8 sm:mb-0 sm:h-[60vh]">
+        <div ref={textRef} className="max-w-3xl">
+          <p className="text-2xl sm:text-3xl font-gilroy font-semibold leading-tight text-black">
+            Experiencia local. Confiabilidad probada. Impulsado por{" "}
+            <span
+              data-gradient=""
+              className="font-black bg-linear-to-r from-primary via-primary via-0% to-primary bg-clip-text text-transparent"
             >
-              <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
-                {icon}
-              </div>
-              <div>
-                <dt className="sr-only">{label}</dt>
-                <dd aria-label={`${value} — ${label}`}>
-                  <span
-                    ref={(el) => {
-                      if (el) numberEls.current[i] = el;
-                    }}
-                    className="text-4xl md:text-5xl font-gilroy font-bold text-foreground leading-none block mb-2 tabular-nums"
-                  >
-                    {value}
-                  </span>
-                </dd>
-                <p
-                  className="text-base font-semibold text-label font-notosans leading-snug"
-                  aria-hidden
-                >
-                  {label}
-                </p>
-              </div>
-            </div>
-          ))}
-        </dl>
+              miles de millones en datos de transacciones procesadas.
+            </span>
+          </p>
+        </div>
       </div>
-    </section>
+
+      {/* Stats */}
+      <div className="px-4 sm:px-6">
+        {stats.map((stat, i) => (
+          <div
+            key={stat.label}
+            ref={(el) => {
+              if (el) statRowsRef.current[i] = el;
+            }}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-t border-neutral-200 py-6 sm:py-8 last:border-b gap-1 sm:gap-0"
+          >
+            <span
+              data-stat-text
+              className="text-xs font-gilroy font-bold uppercase tracking-widest text-secondary w-32 sm:w-48 shrink-0 overflow-hidden"
+            >
+              {stat.label}
+            </span>
+            <span
+              data-stat-text
+              className="text-left sm:text-right font-gilroy font-semibold text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-black leading-none overflow-hidden"
+            >
+              {stat.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
